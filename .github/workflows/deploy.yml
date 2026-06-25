@@ -1,0 +1,32 @@
+name: Déploiement Automatique Azure
+
+on:
+  push:
+    branches: [ "main" ]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy-infrastructure:
+    runs-on: ubuntu-latest
+    steps:
+    
+    - name: Checkout du code
+      uses: actions/checkout@v4
+
+    - name: Connexion à Azure via OIDC
+      uses: azure/login@v2
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    - name: Déploiement des services Azure
+      run: |
+        echo "🚀 Déploiement de l'infrastructure de fbarry..."
+        az appservice plan create --name "plan-appservice-fbarry" --resource-group "fbarryRG" --location "francecentral" --sku F1 --is-linux
+        az webapp create --name "api-appservice-fbarry" --resource-group "fbarryRG" --plan "plan-appservice-fbarry" --runtime "PHP|8.2"
+        az container create --resource-group fbarryRG --name api-aci-fbarry --image mcr.microsoft.com/azuredocs/aci-helloworld --dns-name-label api-aci-fbarry --ports 80 --location francecentral --os-type Linux --cpu 1 --memory 1.5
+        echo "✅ Tout est en ligne !"
