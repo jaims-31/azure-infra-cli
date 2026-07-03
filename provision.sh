@@ -55,3 +55,36 @@ az network vnet subnet update \
   --network-security-group "$NSG_NAME"
 
 echo "✅ Déploiement terminé !"
+
+# ── Stockage (Storage Account + Blobs)
+echo ""
+echo "▶ [9/9] Création du Storage Account..."
+
+export SA_NAME="st${OWNER//-/}cli"
+
+az storage account create \
+  --name "$SA_NAME" \
+  --resource-group "$RG" \
+  --location "$LOCATION" \
+  --sku Standard_LRS \
+  --kind StorageV2 \
+  --allow-blob-public-access true \
+  --tags $TAGS
+
+# Récupération automatique de la connection string
+export AZURE_STORAGE_CONNECTION_STRING=$(az storage account show-connection-string \
+  --name "$SA_NAME" --resource-group "$RG" --query connectionString --output tsv)
+
+# Création des conteneurs
+az storage container create --name "api-logs" --public-access off
+az storage container create --name "api-config" --public-access blob
+
+# Création des fichiers tests locaux
+echo "2024-06-18 - Log test" > access-log.txt
+echo '{"app":"AzureTech","version":"1.0"}' > config.json
+
+# Upload
+az storage blob upload --container-name "api-logs" --file access-log.txt --name "access-log.txt"
+az storage blob upload --container-name "api-config" --file config.json --name "config.json" --content-type "application/json"
+
+echo "✅ Storage Account '$SA_NAME' configuré avec succès."
